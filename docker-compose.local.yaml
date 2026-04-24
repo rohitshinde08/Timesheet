@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: timestamp-backend
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - timestamp-network
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: timestamp-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - timestamp-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: timestamp-postgres
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    volumes:
+      - timestamp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timestamp_user -d timestamp_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - timestamp-network
+
+volumes:
+  timestamp_pgdata:
+
+networks:
+  timestamp-network:
+    driver: bridge
