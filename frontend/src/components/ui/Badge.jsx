@@ -1,24 +1,12 @@
-// frontend/src/components/ui/Badge.jsx
 function Badge({ children, variant = "default" }) {
-  const baseStyles = {
-    display: "inline-block",
-    padding: "4px 10px",
-    borderRadius: "16px",
-    fontSize: "0.75rem",
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: "0.02em",
-  };
-
   const variants = {
-    default: { background: "var(--color-bg)", color: "var(--color-text-muted)" },
-    primary: { background: "var(--color-primary-light)", color: "var(--color-primary)" },
-    success: { background: "var(--color-success-bg)", color: "var(--color-success)" },
-    warning: { background: "var(--color-warning-bg)", color: "var(--color-warning)" },
-    danger: { background: "var(--color-danger-bg)", color: "var(--color-danger)" },
+    default: "bg-slate-100 text-slate-600",
+    primary: "bg-indigo-100 text-indigo-700",
+    success: "bg-emerald-100 text-emerald-700",
+    warning: "bg-amber-100 text-amber-700",
+    danger: "bg-red-100 text-red-700",
   };
 
-  // Map known statuses/roles dynamically
   let mappedVariant = variant;
   switch (variant?.toLowerCase()) {
     case "admin":
@@ -44,9 +32,11 @@ function Badge({ children, variant = "default" }) {
       if (!variants[mappedVariant]) mappedVariant = "default";
   }
 
-  const styles = { ...baseStyles, ...variants[mappedVariant] };
-
-  return <span style={styles}>{children}</span>;
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${variants[mappedVariant]}`}>
+      {children}
+    </span>
+  );
 }
 
 export default Badge;

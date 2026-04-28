@@ -2,16 +2,15 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../utils/api";
 import { jwtDecode } from "jwt-decode";
-import Button from "../../components/ui/Button";
-import "./Login.css";
+import loginIllustration from "../../assets/login_illustration.png";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loginType, setLoginType] = useState("Employee");
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -25,12 +24,11 @@ function Login() {
       const decoded = jwtDecode(data.access_token);
       const role = decoded.role || "employee";
       
-      // Redirect based on role: admin → /admin, hr → /hr, manager → /manager, employee → /employee
       const roleRedirects = {
-        admin: "/admin",
-        hr: "/hr",
-        manager: "/manager",
-        employee: "/employee"
+        admin: "/dashboard",
+        hr: "/dashboard",
+        manager: "/dashboard",
+        employee: "/dashboard"
       };
 
       const redirectPath = roleRedirects[role] || "/dashboard";
@@ -45,45 +43,122 @@ function Login() {
   };
 
   return (
-    <div className="login-wrapper">
-      <div className="login-card-container">
-        <div className="login-header">
-          <div className="brand-logo">⏱ TimeStamp</div>
-          <h2>Sign in to your account</h2>
-          <p>Optimize your workforce management today.</p>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="flex w-full max-w-[1000px] h-[600px] bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden">
+        {/* Left Side (Illustration) */}
+        <div className="hidden md:flex md:w-1/2 bg-[#f4f7fc] flex-col relative p-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-800 leading-tight">WorkTrack</h1>
+              <p className="text-[10px] text-slate-500 font-medium">Smart Work Tracking System</p>
+            </div>
+          </div>
+          
+          <div className="flex-1 flex items-center justify-center">
+            <img 
+              src={loginIllustration} 
+              alt="People working" 
+              className="w-full max-w-[320px] object-contain mix-blend-multiply"
+            />
+          </div>
         </div>
 
-        {error && <div className="toast-error">{error}</div>}
+        {/* Right Side (Form) */}
+        <div className="w-full md:w-1/2 flex flex-col p-10 lg:p-14 justify-center">
+          <h2 className="text-2xl font-bold text-slate-800">Welcome Back{loginType === 'Manager' ? ', Manager' : ''}!</h2>
+          <p className="text-slate-500 text-sm mt-2 mb-8">Please sign in to your account</p>
 
-        <form onSubmit={handleLogin} className="login-form">
-          <div className="form-group-login">
-            <label htmlFor="email">Email Address</label>
-            <input
-              id="email"
-              type="email"
-              placeholder="name@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+          <div className="flex bg-slate-100 p-1 rounded-lg mb-8">
+            <button
+              type="button"
+              onClick={() => setLoginType("Employee")}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                loginType === "Employee" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Employee
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginType("Manager")}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                loginType === "Manager" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Manager
+            </button>
           </div>
 
-          <div className="form-group-login">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          {error && (
+            <div className="bg-red-50 text-red-500 text-sm p-3 rounded-lg mb-6 border border-red-100 text-center">
+              {error}
+            </div>
+          )}
 
-          <Button type="submit" variant="primary" disabled={loading} style={{ marginTop: '12px', width: '100%', padding: '12px' }}>
-            {loading ? "Authenticating..." : "Sign in"}
-          </Button>
-        </form>
+          <form onSubmit={handleLogin} className="flex flex-col gap-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all placeholder:text-slate-400"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer text-slate-400 hover:text-slate-600">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-1 mb-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-600/20" />
+                <span className="text-sm text-slate-500 font-medium">Remember me</span>
+              </label>
+              <a href="#" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">Forgot Password?</a>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-[0_4px_14px_0_rgba(79,70,229,0.39)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.23)] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {loading ? "Authenticating..." : "Login"}
+            </button>
+            
+            <p className="text-center text-sm text-slate-500 mt-2">
+              Don't have an account? <a href="#" className="text-indigo-600 font-medium hover:text-indigo-700">Contact Admin</a>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   );
