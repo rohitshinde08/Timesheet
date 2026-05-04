@@ -11,7 +11,7 @@ from app.services import allocation_service
 router = APIRouter(
     prefix="/allocations",
     tags=["Allocations"],
-    dependencies=[Depends(RoleChecker(["admin", "hr"]))],
+    dependencies=[Depends(RoleChecker(["admin", "hr", "manager"]))],
 )
 
 

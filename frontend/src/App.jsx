@@ -1,10 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
-import ProtectedRoute from "./components/ProtectedRoute";
+import ProtectedRoute, { getAuthUser } from "./components/ProtectedRoute";
 import Login from "./pages/auth/Login";
 
 // Unified Pages
 import Dashboard from "./pages/Dashboard";
+import HRDashboard from "./pages/hr/HRDashboard";
 import Employees from "./pages/admin/Employees";
 import Projects from "./pages/admin/Projects";
 import Allocations from "./pages/hr/Allocations";
@@ -16,6 +17,14 @@ import Reports from "./pages/admin/Reports";
 import Calendar from "./pages/Calendar";
 import Profile from "./pages/Profile";
 
+// Dashboard Switcher to route users based on role
+function DashboardSwitcher() {
+  const user = getAuthUser();
+  if (user?.role === 'hr') return <HRDashboard />;
+  if (user?.role === 'employee') return <TimeLogs />;
+  return <Dashboard />;
+}
+
 function App() {
   return (
     <Routes>
@@ -25,23 +34,30 @@ function App() {
       {/* Protected Layout wrapper applying to all authenticated routes */}
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
-          {/* Role-Specific Root Dashboards */}
+          {/* Main Smart Dashboard */}
+          <Route path="/dashboard" element={<DashboardSwitcher />} />
+          
+          {/* Role-Specific Fallbacks */}
           <Route path="/admin" element={<Dashboard />} />
-          <Route path="/hr" element={<Dashboard />} />
+          <Route path="/hr" element={<HRDashboard />} />
           <Route path="/manager" element={<Dashboard />} />
           <Route path="/employee" element={<TimeLogs />} />
 
-          {/* Existing Shared/Specific Routes */}
-          <Route path="/dashboard" element={<Dashboard />} />
+          {/* Core Routes */}
           <Route path="/time-logs" element={<TimeLogs />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/profile" element={<Profile />} />
 
-          {/* Admin & HR Only */}
-          <Route element={<ProtectedRoute allowedRoles={["admin", "hr"]} />}>
+          {/* Admin, HR & Manager */}
+          <Route element={<ProtectedRoute allowedRoles={["admin", "hr", "manager"]} />}>
             <Route path="/employees" element={<Employees />} />
             <Route path="/employees/:id" element={<EmployeeDetails />} />
+            <Route path="/reports" element={<Reports />} />
+          </Route>
+
+          {/* Admin & HR Only */}
+          <Route element={<ProtectedRoute allowedRoles={["admin", "hr"]} />}>
             <Route path="/allocations" element={<Allocations />} />
             <Route path="/reports" element={<Reports />} />
           </Route>

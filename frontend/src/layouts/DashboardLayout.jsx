@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { api } from "../utils/api";
 import { getAuthUser } from "../components/ProtectedRoute";
 import { 
   Home, 
@@ -22,6 +24,7 @@ const baseNavItems = [
   { path: "/my-timesheet", label: "My Timesheet", roles: ["employee"], icon: Clock },
   { path: "/approvals", label: "Pending Approvals", roles: ["admin", "manager"], icon: FileText, badge: 8 },
   { path: "/employees", label: "Employees", roles: ["admin", "hr", "manager"], icon: Users },
+  { path: "/allocations", label: "Allocations", roles: ["admin", "hr"], icon: Users },
   { path: "/projects", label: "Projects", roles: ["admin", "manager", "hr", "employee"], icon: Folder },
   { path: "/reports", label: "Reports", roles: ["admin", "hr", "manager", "employee"], icon: BarChart2 },
   { path: "/calendar", label: "Calendar", roles: ["admin", "hr", "manager", "employee"], icon: Calendar },
@@ -31,6 +34,22 @@ const baseNavItems = [
 function DashboardLayout() {
   const navigate = useNavigate();
   const user = getAuthUser();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (user?.role === 'manager' || user?.role === 'admin') {
+      fetchPendingCount();
+    }
+  }, [user]);
+
+  const fetchPendingCount = async () => {
+    try {
+      const { data } = await api.get("/approvals/pending");
+      setPendingCount(data.length);
+    } catch (err) {
+      console.error("Failed to fetch pending count:", err);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -38,7 +57,12 @@ function DashboardLayout() {
   };
 
   const navItems = user 
-    ? baseNavItems.filter((item) => item.roles.includes(user.role))
+    ? baseNavItems.map(item => {
+        if (item.path === "/approvals") {
+          return { ...item, badge: pendingCount };
+        }
+        return item;
+      }).filter((item) => item.roles.includes(user.role))
     : [];
 
   return (
@@ -107,7 +131,7 @@ function DashboardLayout() {
             </div>
             
             <div className="hidden lg:flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-4 py-2 shadow-sm text-sm font-medium text-slate-600 cursor-pointer hover:bg-slate-50 transition-colors">
-              <span>15 Apr - 21 Apr 2024</span>
+              <span>{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
               <Calendar size={16} className="text-slate-400" />
             </div>
 
@@ -117,9 +141,11 @@ function DashboardLayout() {
             </button>
 
             <div className="flex items-center gap-3 pl-6 border-l border-slate-200 cursor-pointer group">
-              <img src="https://ui-avatars.com/api/?name=Amit+Sharma&background=f8fafc&color=333" alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-slate-100 group-hover:border-indigo-100 transition-colors" />
-              <div className="hidden md:flex flex-col">
-                <span className="text-sm font-bold text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors">Amit Sharma</span>
+              <img src={`https://ui-avatars.com/api/?name=${(user?.email || 'User').split('@')[0]}&background=f8fafc&color=6366f1`} alt="Avatar" className="w-10 h-10 rounded-full object-cover border-2 border-slate-100 group-hover:border-indigo-100 transition-colors" />
+              <div className="hidden md:flex flex-col text-left">
+                <span className="text-sm font-bold text-slate-800 leading-tight group-hover:text-indigo-600 transition-colors capitalize">
+                  {(user?.email || 'User').split('@')[0].replace('.', ' ')}
+                </span>
                 <span className="text-xs text-slate-500 font-medium capitalize">{user?.role || 'Manager'}</span>
               </div>
               <ChevronDown size={16} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />

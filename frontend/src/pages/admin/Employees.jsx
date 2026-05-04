@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../utils/api";
+import { getAuthUser } from "../../components/ProtectedRoute";
 import Card from "../../components/ui/Card";
 import Table from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
@@ -23,8 +24,44 @@ function Employees() {
 
   const fetchEmployees = async () => {
     try {
-      const { data } = await api.get("/employees/");
-      setEmployees(data);
+      const [empRes, projRes, logRes, allocRes] = await Promise.all([
+        api.get("/employees/"),
+        api.get("/projects/"),
+        api.get("/time-logs/"),
+        api.get("/allocations/")
+      ]);
+
+      let allEmployees = empRes.data;
+      let projects = projRes.data;
+      let logs = logRes.data;
+      let allocations = allocRes.data;
+      const user = getAuthUser();
+
+      if (user?.role === 'manager') {
+        // Find projects managed by this user
+        const managedProjects = projects.filter(p => String(p.manager_id) === String(user.id));
+        const managedProjectIds = new Set(managedProjects.map(p => p.id));
+        
+        // Find employees who have logged time to these projects
+        const employeeIdsWithLogs = new Set(
+          logs.filter(l => managedProjectIds.has(l.project_id)).map(l => l.employee_id)
+        );
+
+        // Find employees who are allocated to these projects
+        const employeeIdsWithAllocations = new Set(
+          allocations.filter(a => managedProjectIds.has(a.project_id)).map(a => a.employee_id)
+        );
+
+        // Combine both sets
+        const teamMemberIds = new Set([...employeeIdsWithLogs, ...employeeIdsWithAllocations]);
+        
+        // Filter the list (exclude self and only show team)
+        allEmployees = allEmployees.filter(e => 
+          teamMemberIds.has(e.id) && String(e.id) !== String(user.id)
+        );
+      }
+
+      setEmployees(allEmployees);
     } catch (err) {
       console.error(err);
     } finally {
@@ -56,37 +93,42 @@ function Employees() {
     }
   };
 
+  const user = getAuthUser();
+  const canManage = user?.role === 'admin' || user?.role === 'hr';
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Directory</h1>
-          <p className="text-slate-500 font-medium">Manage company employees, roles, and access.</p>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Team Directory</h1>
+          <p className="text-slate-500 font-medium">Browse and manage company personnel.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 shadow-sm">
-          <UserPlus size={18} />
-          Add Employee
-        </Button>
+        {canManage && (
+          <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 shadow-indigo-100 shadow-lg">
+            <UserPlus size={18} />
+            Add Employee
+          </Button>
+        )}
       </div>
 
-      <Card className="overflow-hidden border-none shadow-sm">
-        <Table headers={["Employee", "Role", "Status", "Joined", "Actions"]}>
+      <Card className="overflow-hidden border-none shadow-sm bg-white rounded-2xl">
+        <Table headers={["Employee", "Role", "Status", "Joined", ...(canManage ? ["Actions"] : [])]}>
           {employees.map((emp) => (
-            <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
+            <tr key={emp.id} className="group hover:bg-slate-50/50 transition-all duration-200">
               <td className="px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0 border border-indigo-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0 border border-indigo-100/50 shadow-inner">
                     {emp.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <Link 
                       to={`/employees/${emp.id}`} 
-                      className="font-bold text-slate-700 truncate hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+                      className="font-black text-slate-700 truncate hover:text-indigo-600 transition-colors flex items-center gap-2 text-base"
                     >
                       {emp.name}
-                      <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-400" />
                     </Link>
-                    <span className="text-xs text-slate-400 truncate">{emp.email}</span>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{emp.email}</span>
                   </div>
                 </div>
               </td>
@@ -94,31 +136,33 @@ function Employees() {
                 <Badge variant={emp.role}>{emp.role}</Badge>
               </td>
               <td className="px-6 py-4">
-                <div className="flex items-center gap-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                  <span className={`text-xs font-bold ${emp.status === 'active' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${emp.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-300'}`}></div>
+                  <span className={`text-xs font-black uppercase tracking-widest ${emp.status === 'active' ? 'text-emerald-600' : 'text-slate-400'}`}>
                     {emp.status === 'active' ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </td>
-              <td className="px-6 py-4 text-sm text-slate-500 font-medium">
+              <td className="px-6 py-4 text-sm text-slate-500 font-bold">
                 {new Date(emp.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </td>
-              <td className="px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => handleDelete(emp.id)}
-                    disabled={emp.status === 'inactive'}
-                    className={`p-2 rounded-lg transition-all duration-200 ${emp.status === 'inactive' ? 'text-slate-200' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
-                    title="Deactivate"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                  <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
-                    <MoreVertical size={18} />
-                  </button>
-                </div>
-              </td>
+              {canManage && (
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleDelete(emp.id)}
+                      disabled={emp.status === 'inactive'}
+                      className={`p-2.5 rounded-xl transition-all duration-200 ${emp.status === 'inactive' ? 'text-slate-200' : 'text-slate-400 hover:text-red-500 hover:bg-red-50 active:scale-90'}`}
+                      title="Deactivate Account"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                    <button className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90">
+                      <MoreVertical size={20} />
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </Table>

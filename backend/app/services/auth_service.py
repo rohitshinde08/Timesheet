@@ -45,5 +45,5 @@ def authenticate(db: Session, data: LoginRequest) -> TokenResponse:
             detail="Your account has been deactivated. Please contact support.",
         )
 
-    token = create_access_token(data={"sub": str(user.id), "role": user.role.value})
+    token = create_access_token(data={"sub": str(user.id), "role": user.role.value, "email": user.email})
     return TokenResponse(access_token=token)
