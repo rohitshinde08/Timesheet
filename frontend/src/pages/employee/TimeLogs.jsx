@@ -5,7 +5,10 @@ import Card from "../../components/ui/Card";
 import Table from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
-import Skeleton from "../../components/ui/Skeleton";
+import { 
+  Clock, Plus, Calendar, Briefcase, 
+  LayoutGrid, FileText, CheckCircle2, AlertCircle
+} from "lucide-react";
 
 function TimeLogs() {
   const [myLogs, setMyLogs] = useState([]);
@@ -15,6 +18,7 @@ function TimeLogs() {
 
   // Form
   const [form, setForm] = useState({ project_id: "", task_id: "", date: new Date().toISOString().split('T')[0], hours: "", description: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [msg, setMsg] = useState({ text: "", type: "" });
   
   const user = getAuthUser();
@@ -62,6 +66,7 @@ function TimeLogs() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     setMsg({ text: "", type: "" });
     try {
       await api.post("/time-logs/", {
@@ -75,82 +80,180 @@ function TimeLogs() {
       fetchData();
     } catch (err) {
       setMsg({ text: err.response?.data?.detail || "Failed to log time.", type: "error" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">My Time Logs</h1>
-          <p className="page-subtitle">Track and report your project contribution hours.</p>
-        </div>
+    <div className="flex flex-col gap-8 pb-12">
+      {/* Header */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Time Tracking</h1>
+        <p className="text-slate-500 font-medium">Record and manage your daily project contributions.</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "24px" }}>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         
         {/* Input Log Form */}
-        <Card title="Book Hours">
+        <Card className="p-8 border-none shadow-sm h-fit">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+              <Plus size={20} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">Book Hours</h3>
+          </div>
+
           {msg.text && (
-            <div style={{ padding: 12, marginBottom: 16, borderRadius: "8px", 
-              backgroundColor: msg.type === "error" ? "var(--color-danger-bg)" : "var(--color-success-bg)",
-              color: msg.type === "error" ? "var(--color-danger)" : "var(--color-success)",
-              fontSize: "0.85rem" }}>
+            <div className={`p-4 mb-6 rounded-2xl flex items-center gap-3 text-sm font-bold border ${
+              msg.type === "error" 
+                ? "bg-rose-50 text-rose-600 border-rose-100" 
+                : "bg-emerald-50 text-emerald-600 border-emerald-100"
+            }`}>
+              {msg.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
               {msg.text}
             </div>
           )}
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-             <div>
-              <label>Select Project</label>
-              <select required value={form.project_id} onChange={e => setForm({...form, project_id: e.target.value, task_id: ""})} style={{width: "100%"}}>
-                <option value="">- Available Projects -</option>
-                {allocatedProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Project</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                  <Briefcase size={18} />
+                </div>
+                <select 
+                  required 
+                  value={form.project_id} 
+                  onChange={e => setForm({...form, project_id: e.target.value, task_id: ""})}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 transition-all appearance-none"
+                >
+                  <option value="">Select Project</option>
+                  {allocatedProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
             </div>
-            <div>
-              <label>Select Task</label>
-              <select required value={form.task_id} onChange={e => setForm({...form, task_id: e.target.value})} style={{width: "100%"}} disabled={!form.project_id}>
-                <option value="">- Select Task -</option>
-                {tasks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Task / Milestone</label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                  <LayoutGrid size={18} />
+                </div>
+                <select 
+                  required 
+                  value={form.task_id} 
+                  onChange={e => setForm({...form, task_id: e.target.value})}
+                  disabled={!form.project_id}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 transition-all appearance-none disabled:opacity-50"
+                >
+                  <option value="">Select Task</option>
+                  {tasks.map(t => <option key={t.id} value={t.id}>{t.title || t.name}</option>)}
+                </select>
+              </div>
             </div>
-            <div>
-              <label>Date</label>
-              <input type="date" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} style={{width: "100%"}} />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Date</label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Calendar size={18} />
+                  </div>
+                  <input 
+                    type="date" 
+                    required 
+                    value={form.date} 
+                    onChange={e => setForm({...form, date: e.target.value})}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 transition-all"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hours</label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <Clock size={18} />
+                  </div>
+                  <input 
+                    type="number" 
+                    step="0.5" 
+                    min="0.5" 
+                    max="24" 
+                    required 
+                    value={form.hours} 
+                    onChange={e => setForm({...form, hours: e.target.value})}
+                    placeholder="e.g. 4.5"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 transition-all"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <label>Hours Worked</label>
-              <input type="number" step="0.5" min="0.5" max="24" required value={form.hours} onChange={e => setForm({...form, hours: e.target.value})} style={{width: "100%"}} placeholder="4.5" />
+
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Description</label>
+              <div className="relative">
+                <div className="absolute left-4 top-4 text-slate-400">
+                  <FileText size={18} />
+                </div>
+                <textarea 
+                  value={form.description} 
+                  onChange={e => setForm({...form, description: e.target.value})}
+                  placeholder="What did you achieve?"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700 transition-all h-24 resize-none"
+                />
+              </div>
             </div>
-            <div>
-              <label>Work Description (Optional)</label>
-              <textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} style={{width: "100%", height: "80px"}} />
-            </div>
-            <Button type="submit" style={{marginTop: "8px"}}>Book Time</Button>
+
+            <Button 
+              type="submit" 
+              className="mt-2 py-4 shadow-lg shadow-indigo-100"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Booking..." : "Book Time"}
+            </Button>
           </form>
         </Card>
 
         {/* History Area */}
-        <Card title="History" subtitle="Your recently submitted timesheets.">
-          {loading ? <Skeleton count={4} height="40px" /> : (
-            <Table headers={["Date", "Project", "Task", "Hours", "Status", "Description"]} emptyMessage="No time booked yet.">
-               {myLogs.slice(0).reverse().map(log => (
-                 <tr key={log.id}>
-                   <td style={{ fontWeight: 500 }}>{log.date}</td>
-                   <td>P{log.project_id}</td>
-                   <td>T{log.task_id}</td>
-                   <td>{log.hours}h</td>
-                   <td><Badge variant={log.status}>{log.status}</Badge></td>
-                   <td style={{ maxWidth: "200px", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", color: "var(--color-text-muted)" }}>
-                      {log.description || "—"}
-                   </td>
-                 </tr>
-               ))}
-            </Table>
-          )}
-        </Card>
+        <div className="xl:col-span-2">
+          <Card className="overflow-hidden border-none shadow-sm">
+            <div className="px-8 py-6 border-b border-slate-50 bg-white">
+              <h3 className="text-lg font-bold text-slate-800">Recent History</h3>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Your latest timesheet submissions</p>
+            </div>
+            
+            <div className="p-0">
+              <Table headers={["Date", "Project", "Task", "Hours", "Status"]}>
+                {myLogs.length > 0 ? (
+                  myLogs.slice(0).reverse().map(log => (
+                    <tr key={log.id} className="group hover:bg-slate-50/50">
+                      <td className="px-6 py-4 text-sm font-bold text-slate-600">{new Date(log.date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-bold text-slate-700">{log.project?.name || `Proj #${log.project_id}`}</span>
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-slate-500">{log.task?.title || `Task #${log.task_id}`}</td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 bg-indigo-50 rounded-lg text-xs font-black text-indigo-600">{log.hours}h</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant={log.status}>{log.status}</Badge>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-8 py-12 text-center text-slate-400 font-medium italic">
+                      No time booked yet. Start logging your hours to see history.
+                    </td>
+                  </tr>
+                )}
+              </Table>
+            </div>
+          </Card>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
