@@ -21,6 +21,12 @@ def list_employees(db: Session = Depends(get_db)):
     return employee_service.get_all_employees(db)
 
 
+@router.get("/{employee_id}", response_model=EmployeeResponse)
+def get_employee(employee_id: int, db: Session = Depends(get_db)):
+    """Get a single employee by ID."""
+    return employee_service.get_employee(db, employee_id)
+
+
 @router.post("/", response_model=EmployeeResponse)
 def create_employee(data: EmployeeCreate, db: Session = Depends(get_db)):
     """Create a new employee."""

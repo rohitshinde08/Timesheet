@@ -9,8 +9,19 @@ from app.schemas.employee_schema import EmployeeCreate
 
 
 def get_all_employees(db: Session) -> List[Employee]:
-    """Return all employees."""
-    return db.query(Employee).all()
+    """Return all active employees."""
+    return db.query(Employee).filter(Employee.status == "active").all()
+
+
+def get_employee(db: Session, employee_id: int) -> Employee:
+    """Get an employee by ID."""
+    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    if not employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee not found",
+        )
+    return employee
 
 
 def create_employee(db: Session, data: EmployeeCreate) -> Employee:
@@ -55,7 +66,7 @@ def update_employee(db: Session, employee_id: int, data: dict) -> Employee:
 
 
 def delete_employee(db: Session, employee_id: int) -> None:
-    """Delete an employee by ID."""
+    """Soft delete an employee by setting status to inactive."""
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
         raise HTTPException(
@@ -63,5 +74,5 @@ def delete_employee(db: Session, employee_id: int) -> None:
             detail="Employee not found",
         )
 
-    db.delete(employee)
+    employee.status = "inactive"
     db.commit()

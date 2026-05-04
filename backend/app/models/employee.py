@@ -14,6 +14,11 @@ class RoleEnum(str, enum.Enum):
     employee = "employee"
 
 
+class EmployeeStatusEnum(str, enum.Enum):
+    active = "active"
+    inactive = "inactive"
+
+
 class Employee(Base):
     __tablename__ = "employees"
 
@@ -22,6 +27,7 @@ class Employee(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
     role = Column(Enum(RoleEnum), nullable=False, default=RoleEnum.employee)
+    status = Column(Enum(EmployeeStatusEnum), nullable=False, default=EmployeeStatusEnum.active)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships

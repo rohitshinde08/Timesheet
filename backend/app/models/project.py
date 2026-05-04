@@ -10,6 +10,7 @@ from app.database.session import Base
 class ProjectStatusEnum(str, enum.Enum):
     active = "active"
     completed = "completed"
+    inactive = "inactive"
 
 
 class Project(Base):

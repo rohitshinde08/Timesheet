@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../../utils/api";
 import Card from "../../components/ui/Card";
 import Table from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
-import Skeleton from "../../components/ui/Skeleton";
+import { UserPlus, Mail, Lock, UserCog, Trash2, ShieldCheck, MoreVertical, ExternalLink } from "lucide-react";
 
 function Employees() {
   const [employees, setEmployees] = useState([]);
@@ -38,71 +39,181 @@ function Employees() {
       await api.post("/employees/", form);
       setIsModalOpen(false);
       setForm({ name: "", email: "", password: "", role: "employee" });
-      fetchEmployees(); // Refresh table
+      fetchEmployees();
     } catch (err) {
       setSubmitError(err.response?.data?.detail || "Failed to create employee.");
     }
   };
 
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to deactivate this employee?")) {
+      try {
+        await api.delete(`/employees/${id}`);
+        fetchEmployees();
+      } catch (err) {
+        alert("Failed to deactivate employee.");
+      }
+    }
+  };
+
   return (
-    <>
-      <div className="page-header">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="page-title">Directory</h1>
-          <p className="page-subtitle">Manage company employees and roles.</p>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Directory</h1>
+          <p className="text-slate-500 font-medium">Manage company employees, roles, and access.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}>+ Add Employee</Button>
+        <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 shadow-sm">
+          <UserPlus size={18} />
+          Add Employee
+        </Button>
       </div>
 
-      <Card>
-        {loading ? (
-          <Skeleton count={5} height="40px" />
-        ) : (
-          <Table headers={["ID", "Name", "Email", "Role", "Joined"]}>
-            {employees.map((emp) => (
-              <tr key={emp.id}>
-                <td>{emp.id}</td>
-                <td style={{ fontWeight: 500 }}>{emp.name}</td>
-                <td style={{ color: "var(--color-text-muted)" }}>{emp.email}</td>
-                <td><Badge variant={emp.role}>{emp.role}</Badge></td>
-                <td>{new Date(emp.created_at).toLocaleDateString()}</td>
-              </tr>
-            ))}
-          </Table>
-        )}
+      <Card className="overflow-hidden border-none shadow-sm">
+        <Table headers={["Employee", "Role", "Status", "Joined", "Actions"]}>
+          {employees.map((emp) => (
+            <tr key={emp.id} className="group hover:bg-slate-50/50 transition-colors">
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0 border border-indigo-100">
+                    {emp.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <Link 
+                      to={`/employees/${emp.id}`} 
+                      className="font-bold text-slate-700 truncate hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+                    >
+                      {emp.name}
+                      <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
+                    <span className="text-xs text-slate-400 truncate">{emp.email}</span>
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <Badge variant={emp.role}>{emp.role}</Badge>
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${emp.status === 'active' ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                  <span className={`text-xs font-bold ${emp.status === 'active' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    {emp.status === 'active' ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              </td>
+              <td className="px-6 py-4 text-sm text-slate-500 font-medium">
+                {new Date(emp.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleDelete(emp.id)}
+                    disabled={emp.status === 'inactive'}
+                    className={`p-2 rounded-lg transition-all duration-200 ${emp.status === 'inactive' ? 'text-slate-200' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+                    title="Deactivate"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                  <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                    <MoreVertical size={18} />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </Table>
       </Card>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Employee">
-        {submitError && <div style={{ color: "var(--color-danger)", marginBottom: 16 }}>{submitError}</div>}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div>
-            <label>Full Name</label>
-            <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{width: "100%"}} />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {submitError && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2">
+              <ShieldCheck size={16} />
+              {submitError}
+            </div>
+          )}
+          
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              Full Name
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <UserCog size={18} />
+              </span>
+              <input 
+                type="text" 
+                required 
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                placeholder="e.g. John Doe"
+                value={form.name} 
+                onChange={e => setForm({...form, name: e.target.value})} 
+              />
+            </div>
           </div>
-          <div>
-            <label>Email Address</label>
-            <input type="email" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} style={{width: "100%"}} />
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              Email Address
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <Mail size={18} />
+              </span>
+              <input 
+                type="email" 
+                required 
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                placeholder="john@company.com"
+                value={form.email} 
+                onChange={e => setForm({...form, email: e.target.value})} 
+              />
+            </div>
           </div>
-          <div>
-            <label>Temporary Password</label>
-            <input type="password" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} style={{width: "100%"}} />
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              Password
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <Lock size={18} />
+              </span>
+              <input 
+                type="password" 
+                required 
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                placeholder="••••••••"
+                value={form.password} 
+                onChange={e => setForm({...form, password: e.target.value})} 
+              />
+            </div>
           </div>
-          <div>
-            <label>Assign Role</label>
-            <select required value={form.role} onChange={e => setForm({...form, role: e.target.value})} style={{width: "100%"}}>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-slate-700">Assign Role</label>
+            <select 
+              required 
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none"
+              value={form.role} 
+              onChange={e => setForm({...form, role: e.target.value})}
+            >
               <option value="employee">Employee</option>
               <option value="manager">Manager</option>
               <option value="hr">HR</option>
               <option value="admin">Admin</option>
             </select>
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 16 }}>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)} type="button">Cancel</Button>
+
+          <div className="flex items-center justify-end gap-3 mt-4">
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)} type="button">
+              Cancel
+            </Button>
             <Button type="submit">Create User</Button>
           </div>
         </form>
       </Modal>
-    </>
+    </div>
   );
 }
 
