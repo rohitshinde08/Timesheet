@@ -12,6 +12,15 @@ from app.services import time_log_service
 router = APIRouter(prefix="/time-logs", tags=["Time Logs"])
 
 
+@router.get("/", response_model=List[TimeLogResponse])
+def get_all_logs(
+    db: Session = Depends(get_db),
+    current_user: Employee = Depends(get_current_user),
+):
+    """Get all time logs (For Reports/Admin)."""
+    return time_log_service.get_all_time_logs(db)
+
+
 @router.post("/", response_model=TimeLogResponse)
 def create_time_log(
     data: TimeLogCreate,

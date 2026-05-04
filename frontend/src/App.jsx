@@ -12,6 +12,9 @@ import Approvals from "./pages/manager/Approvals";
 import TimeLogs from "./pages/employee/TimeLogs";
 import ProjectDetails from "./pages/admin/ProjectDetails";
 import EmployeeDetails from "./pages/admin/EmployeeDetails";
+import Reports from "./pages/admin/Reports";
+import Calendar from "./pages/Calendar";
+import Profile from "./pages/Profile";
 
 function App() {
   return (
@@ -32,12 +35,15 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/time-logs" element={<TimeLogs />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/calendar" element={<Calendar />} />
+          <Route path="/profile" element={<Profile />} />
 
           {/* Admin & HR Only */}
           <Route element={<ProtectedRoute allowedRoles={["admin", "hr"]} />}>
             <Route path="/employees" element={<Employees />} />
             <Route path="/employees/:id" element={<EmployeeDetails />} />
             <Route path="/allocations" element={<Allocations />} />
+            <Route path="/reports" element={<Reports />} />
           </Route>
           
           <Route path="/projects/:id" element={<ProjectDetails />} />

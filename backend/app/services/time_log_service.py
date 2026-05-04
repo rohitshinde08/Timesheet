@@ -29,3 +29,8 @@ def get_my_time_logs(db: Session, employee_id: int) -> List[TimeLog]:
 def get_time_logs_by_project(db: Session, project_id: int) -> List[TimeLog]:
     """Return all time logs for a project."""
     return db.query(TimeLog).filter(TimeLog.project_id == project_id).all()
+
+
+def get_all_time_logs(db: Session) -> List[TimeLog]:
+    """Return all time logs."""
+    return db.query(TimeLog).all()
