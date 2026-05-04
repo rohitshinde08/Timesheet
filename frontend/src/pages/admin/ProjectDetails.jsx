@@ -5,6 +5,7 @@ import Card from "../../components/ui/Card";
 import Table from "../../components/ui/Table";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
+import Modal from "../../components/ui/Modal";
 import { 
   ArrowLeft, LayoutGrid, User, Users, Calendar, 
   Clock, CheckCircle2, AlertCircle, FileText, MoreVertical, Info, Trash2, Activity
@@ -15,9 +16,23 @@ function ProjectDetails() {
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Add Task Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newTask, setNewTask] = useState({ title: '', description: '', assigned_to: '' });
+
+  // Add Member Modal State
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [newMember, setNewMember] = useState({ employee_id: '', allocation_percent: '100' });
+  const [employees, setEmployees] = useState([]);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMemberSubmitting, setIsMemberSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchProject();
+    fetchEmployees();
   }, [id]);
 
   const fetchProject = async () => {
@@ -28,6 +43,55 @@ function ProjectDetails() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const { data } = await api.get('/employees/');
+      setEmployees(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await api.post('/tasks/', {
+        ...newTask,
+        project_id: parseInt(id),
+        assigned_to: parseInt(newTask.assigned_to)
+      });
+      setIsModalOpen(false);
+      setNewTask({ title: '', description: '', assigned_to: '' });
+      fetchProject();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to create task');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+    setIsMemberSubmitting(true);
+    setError('');
+    try {
+      await api.post('/allocations/', {
+        employee_id: parseInt(newMember.employee_id),
+        project_id: parseInt(id),
+        allocation_percent: parseFloat(newMember.allocation_percent)
+      });
+      setIsMemberModalOpen(false);
+      setNewMember({ employee_id: '', allocation_percent: '100' });
+      fetchProject();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to add member');
+    } finally {
+      setIsMemberSubmitting(false);
     }
   };
 
@@ -67,7 +131,10 @@ function ProjectDetails() {
               <FileText size={18} />
               Export Report
             </Button>
-            <Button className="flex items-center gap-2">
+            <Button 
+              onClick={() => setIsMemberModalOpen(true)}
+              className="flex items-center gap-2"
+            >
               Add Member
             </Button>
           </div>
@@ -137,7 +204,12 @@ function ProjectDetails() {
                 <Users size={20} className="text-indigo-500" />
                 Active Team
               </h3>
-              <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700">Manage Team</button>
+              <button 
+                onClick={() => setIsMemberModalOpen(true)}
+                className="text-sm font-bold text-indigo-600 hover:text-indigo-700"
+              >
+                Manage Team
+              </button>
             </div>
             <Table headers={["Member", "Role", "Allocation", "Actions"]}>
               {project.allocations && project.allocations.length > 0 ? (
@@ -154,7 +226,7 @@ function ProjectDetails() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <button className="p-2 text-slate-400 hover:text-red-500 rounded-lg">
+                      <button className="p-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -176,7 +248,12 @@ function ProjectDetails() {
                 <LayoutGrid size={20} className="text-indigo-500" />
                 Tasks & Milestones
               </h3>
-              <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700">+ New Task</button>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="text-sm font-bold text-indigo-600 hover:text-indigo-700"
+              >
+                + New Task
+              </button>
             </div>
             <Table headers={["Task Title", "Assignee", "Status", "Actions"]}>
               {project.tasks && project.tasks.length > 0 ? (
@@ -207,24 +284,44 @@ function ProjectDetails() {
 
         {/* Right Column: Sidebar info */}
         <div className="flex flex-col gap-8">
-          <Card className="p-8 border-none shadow-sm bg-gradient-to-br from-slate-800 to-slate-900 text-white">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <Calendar size={20} className="text-indigo-400" />
+          <Card className="p-8 border-none shadow-sm bg-white overflow-hidden relative group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-110 duration-500"></div>
+            
+            <h3 className="text-lg font-bold mb-8 flex items-center gap-2 text-slate-800 relative z-10">
+              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                <Calendar size={18} />
+              </div>
               Project Timeline
             </h3>
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-2 h-2 rounded-full bg-indigo-400 mt-2 shrink-0 shadow-[0_0_10px_rgba(129,140,248,0.5)]"></div>
+            
+            <div className="relative space-y-10 relative z-10 ml-3">
+              {/* Vertical Line */}
+              <div className="absolute left-[3px] top-2 bottom-2 w-[2px] bg-slate-100"></div>
+              
+              <div className="flex items-start gap-6 relative">
+                <div className="w-2 h-2 rounded-full bg-indigo-500 mt-2 shrink-0 ring-4 ring-indigo-50"></div>
                 <div>
-                  <p className="text-sm font-bold mb-0.5">Kickoff Meeting</p>
-                  <p className="text-xs text-slate-400 font-medium">{new Date(project.created_at).toLocaleDateString()}</p>
+                  <p className="text-sm font-bold text-slate-800 mb-1">Kickoff Meeting</p>
+                  <p className="text-xs text-slate-400 font-bold flex items-center gap-1.5">
+                    <Clock size={12} />
+                    {new Date(project.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start gap-4">
-                <div className="w-2 h-2 rounded-full bg-slate-600 mt-2 shrink-0"></div>
+              
+              <div className="flex items-start gap-6 relative">
+                <div className="w-2 h-2 rounded-full bg-slate-200 mt-2 shrink-0 ring-4 ring-white"></div>
                 <div>
-                  <p className="text-sm font-bold mb-0.5 text-slate-400">Phase 1 Delivery</p>
-                  <p className="text-xs text-slate-500 font-medium">Coming soon</p>
+                  <p className="text-sm font-bold text-slate-400 mb-1">Phase 1 Delivery</p>
+                  <p className="text-xs text-slate-300 font-bold uppercase tracking-widest">Coming soon</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-6 relative">
+                <div className="w-2 h-2 rounded-full bg-slate-200 mt-2 shrink-0 ring-4 ring-white"></div>
+                <div>
+                  <p className="text-sm font-bold text-slate-400 mb-1">Final Handover</p>
+                  <p className="text-xs text-slate-300 font-bold uppercase tracking-widest">TBD</p>
                 </div>
               </div>
             </div>
@@ -248,6 +345,164 @@ function ProjectDetails() {
           </Card>
         </div>
       </div>
+
+      {/* Add Task Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title="Add New Task"
+      >
+        <form onSubmit={handleAddTask} className="flex flex-col gap-5">
+          {error && (
+            <div className="p-3 bg-rose-50 text-rose-600 text-xs font-bold rounded-xl flex items-center gap-2 border border-rose-100">
+              <AlertCircle size={14} />
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Task Title</label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <FileText size={18} />
+              </div>
+              <input
+                type="text"
+                placeholder="e.g. Design Database Schema"
+                required
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all"
+                value={newTask.title}
+                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+            <textarea
+              placeholder="Provide more context..."
+              rows={3}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all resize-none"
+              value={newTask.description}
+              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Assign To</label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <User size={18} />
+              </div>
+              <select
+                required
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 transition-all appearance-none"
+                value={newTask.assigned_to}
+                onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
+              >
+                <option value="">Select a team member</option>
+                {project.allocations?.map((alloc) => (
+                  <option key={alloc.employee.id} value={alloc.employee.id}>
+                    {alloc.employee.name} ({alloc.employee.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 mt-4">
+            <Button 
+              type="button" 
+              variant="secondary" 
+              className="flex-1" 
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1" 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Task'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Member Modal */}
+      <Modal 
+        isOpen={isMemberModalOpen} 
+        onClose={() => setIsMemberModalOpen(false)} 
+        title="Assign New Member"
+      >
+        <form onSubmit={handleAddMember} className="flex flex-col gap-5">
+          {error && (
+            <div className="p-3 bg-rose-50 text-rose-600 text-xs font-bold rounded-xl flex items-center gap-2 border border-rose-100">
+              <AlertCircle size={14} />
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Employee</label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <User size={18} />
+              </div>
+              <select
+                required
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 transition-all appearance-none"
+                value={newMember.employee_id}
+                onChange={(e) => setNewMember({ ...newMember, employee_id: e.target.value })}
+              >
+                <option value="">Select an employee</option>
+                {employees.filter(e => !project.allocations?.some(a => a.employee.id === e.id)).map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} ({emp.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Allocation Percentage (%)</label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <Activity size={18} />
+              </div>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                required
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all"
+                value={newMember.allocation_percent}
+                onChange={(e) => setNewMember({ ...newMember, allocation_percent: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 mt-4">
+            <Button 
+              type="button" 
+              variant="secondary" 
+              className="flex-1" 
+              onClick={() => setIsMemberModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1" 
+              disabled={isMemberSubmitting}
+            >
+              {isMemberSubmitting ? 'Adding...' : 'Add Member'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
