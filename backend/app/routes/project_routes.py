@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import RoleChecker
 from app.database.session import get_db
-from app.schemas.project_schema import ProjectCreate, ProjectResponse
+from app.schemas.project_schema import ProjectCreate, ProjectResponse, ProjectDetailResponse
 from app.services import project_service
 
 router = APIRouter(
@@ -19,6 +19,12 @@ router = APIRouter(
 def list_projects(db: Session = Depends(get_db)):
     """Get all projects."""
     return project_service.get_all_projects(db)
+
+
+@router.get("/{project_id}", response_model=ProjectDetailResponse)
+def get_project(project_id: int, db: Session = Depends(get_db)):
+    """Get a single project by ID."""
+    return project_service.get_project(db, project_id)
 
 
 @router.post("/", response_model=ProjectResponse)

@@ -39,5 +39,11 @@ def authenticate(db: Session, data: LoginRequest) -> TokenResponse:
             detail="Invalid email or password",
         )
 
+    if user.status == "inactive":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been deactivated. Please contact support.",
+        )
+
     token = create_access_token(data={"sub": str(user.id), "role": user.role.value})
     return TokenResponse(access_token=token)

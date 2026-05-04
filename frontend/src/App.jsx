@@ -10,6 +10,8 @@ import Projects from "./pages/admin/Projects";
 import Allocations from "./pages/hr/Allocations";
 import Approvals from "./pages/manager/Approvals";
 import TimeLogs from "./pages/employee/TimeLogs";
+import ProjectDetails from "./pages/admin/ProjectDetails";
+import EmployeeDetails from "./pages/admin/EmployeeDetails";
 
 function App() {
   return (
@@ -34,8 +36,11 @@ function App() {
           {/* Admin & HR Only */}
           <Route element={<ProtectedRoute allowedRoles={["admin", "hr"]} />}>
             <Route path="/employees" element={<Employees />} />
+            <Route path="/employees/:id" element={<EmployeeDetails />} />
             <Route path="/allocations" element={<Allocations />} />
           </Route>
+          
+          <Route path="/projects/:id" element={<ProjectDetails />} />
 
           {/* Admin & Manager Only */}
           <Route element={<ProtectedRoute allowedRoles={["admin", "manager"]} />}>
