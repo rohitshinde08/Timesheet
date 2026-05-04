@@ -11,7 +11,7 @@ from app.services import employee_service
 router = APIRouter(
     prefix="/employees",
     tags=["Employees"],
-    dependencies=[Depends(RoleChecker(["admin", "hr"]))],
+    dependencies=[Depends(RoleChecker(["admin", "hr", "manager"]))],
 )
 
 

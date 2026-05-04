@@ -7,11 +7,14 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import { Plus, Briefcase, User, Info, Calendar, Trash2, MoreVertical, LayoutGrid, ExternalLink } from "lucide-react";
+import { getAuthUser } from "../../components/ProtectedRoute";
 
 function Projects() {
   const [projects, setProjects] = useState([]);
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const user = getAuthUser();
+  const canManage = user?.role === 'admin' || user?.role === 'hr';
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,7 +31,13 @@ function Projects() {
         api.get("/projects/"),
         api.get("/employees/") 
       ]);
-      setProjects(projRes.data);
+      
+      let allProjects = projRes.data;
+      if (user?.role === 'manager') {
+        allProjects = allProjects.filter(p => String(p.manager_id) === String(user.id));
+      }
+
+      setProjects(allProjects);
       setManagers(empRes.data.filter(e => e.role === "manager" || e.role === "admin"));
     } catch (err) {
       console.error(err);
@@ -65,45 +74,47 @@ function Projects() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-[1600px] mx-auto pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Projects</h1>
-          <p className="text-slate-500 font-medium">Track active projects and their designated managers.</p>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Project Portfolio</h1>
+          <p className="text-slate-500 font-medium">Overview of active initiatives and team leads.</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 shadow-sm">
-          <Plus size={18} />
-          Create Project
-        </Button>
+        {canManage && (
+          <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 shadow-indigo-100 shadow-lg">
+            <Plus size={18} />
+            Create Project
+          </Button>
+        )}
       </div>
 
-      <Card className="overflow-hidden border-none shadow-sm">
-        <Table headers={["Project Name", "Lead / Manager", "Status", "Started", "Actions"]}>
+      <Card className="overflow-hidden border-none shadow-sm bg-white rounded-2xl">
+        <Table headers={["Project Name", "Lead / Manager", "Status", "Started", ...(canManage ? ["Actions"] : [])]}>
           {projects.map((proj) => (
-            <tr key={proj.id} className="group hover:bg-slate-50/50 transition-colors">
+            <tr key={proj.id} className="group hover:bg-slate-50/50 transition-all duration-200">
               <td className="px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100">
-                    <LayoutGrid size={20} />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/50 shadow-inner">
+                    <LayoutGrid size={24} />
                   </div>
                   <div className="flex flex-col min-w-0">
                     <Link 
                       to={`/projects/${proj.id}`} 
-                      className="font-bold text-slate-700 truncate hover:text-indigo-600 transition-colors flex items-center gap-1.5"
+                      className="font-black text-slate-700 truncate hover:text-indigo-600 transition-colors flex items-center gap-2 text-base"
                     >
                       {proj.name}
-                      <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-400" />
                     </Link>
-                    <span className="text-xs text-slate-400 truncate">ID: PRJ-{proj.id}</span>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">ID: PRJ-{proj.id}</span>
                   </div>
                 </div>
               </td>
               <td className="px-6 py-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-bold">
-                    <User size={12} />
+                  <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-black border border-slate-200">
+                    {proj.manager_name?.charAt(0) || "U"}
                   </div>
-                  <span className="text-sm font-medium text-slate-600">
+                  <span className="text-sm font-bold text-slate-600">
                     {proj.manager_name || "Unassigned"}
                   </span>
                 </div>
@@ -111,24 +122,26 @@ function Projects() {
               <td className="px-6 py-4">
                 <Badge variant={proj.status}>{proj.status}</Badge>
               </td>
-              <td className="px-6 py-4 text-sm text-slate-500 font-medium">
+              <td className="px-6 py-4 text-sm text-slate-500 font-bold">
                 {new Date(proj.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </td>
-              <td className="px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => handleDelete(proj.id)}
-                    disabled={proj.status === 'inactive'}
-                    className={`p-2 rounded-lg transition-all duration-200 ${proj.status === 'inactive' ? 'text-slate-200' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
-                    title="Deactivate"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                  <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
-                    <MoreVertical size={18} />
-                  </button>
-                </div>
-              </td>
+              {canManage && (
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleDelete(proj.id)}
+                      disabled={proj.status === 'inactive'}
+                      className={`p-2.5 rounded-xl transition-all duration-200 ${proj.status === 'inactive' ? 'text-slate-200' : 'text-slate-400 hover:text-red-500 hover:bg-red-50 active:scale-90'}`}
+                      title="Deactivate Project"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                    <button className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90">
+                      <MoreVertical size={20} />
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </Table>

@@ -18,6 +18,7 @@ export const getAuthUser = () => {
     return {
       id: decoded.sub,
       role: decoded.role,
+      email: decoded.email
     };
   } catch (err) {
     return null;
